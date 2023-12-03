@@ -10,5 +10,5 @@ pip install -r requirements.txt
 
 Use the following command to run the code: 
 ```python
-python duplicate.py ---directory "D:\Pictures\"
+python duplicate.py --directory "D:\Pictures\"
 ```
