@@ -5,106 +5,121 @@ import itertools
 from PIL import Image
 from tqdm import tqdm
 import argparse
-import pdb
 import skimage.measure
 
-parser = argparse.ArgumentParser(description='find-duplicate-images')
-parser.add_argument('--inspection_folder', type=str, default="D:\\Pictures\\Inspection", help='Directory of images.')
-args = parser.parse_args()
-
-inspection_folder = args.inspection_folder
-print ("Inspection folder: " + str(inspection_folder))
-
-folders = [x[0] for x in os.walk(inspection_folder)]
-
+# Constants
 COMPARE_SIZE = 300
-sleep_time = 0.1
+SLEEP_TIME = 0.1
 
-to_delete = []
+def process_image(file_path):
+    try:
+        img = Image.open(file_path).convert('L')
+        img = img.resize((COMPARE_SIZE, COMPARE_SIZE))
+        img = np.array(img)
 
-def check_folder(folder):
-	print("Checking Folder -> " + folder)
-	files = os.listdir(folder)
-	files.sort()
-	m = len(files)
+        for _ in range(3):
+            img = skimage.measure.block_reduce(img, (2, 2), func=np.mean)
 
-	images = []
-	images_name = []
-	time.sleep(sleep_time)
-	for i in tqdm(range(m)):
-		try:
-			img = Image.open(os.path.join(folder, files[i])).convert('L')
-			if img is not None:
-				img = img.resize((COMPARE_SIZE, COMPARE_SIZE))
-				img = np.array(img)
+        return img
+    except Exception as e:
+        print(f"Error processing image {file_path}: {e}")
+        return None
 
-				img = skimage.measure.block_reduce(img, (2, 2), func=np.mean)
-				img = skimage.measure.block_reduce(img, (2, 2), func=np.mean)
-				img = skimage.measure.block_reduce(img, (2, 2), func=np.mean)
+def find_duplicates(images, images_name):
+    im_duplicates = []
 
-				images.append(img)
-				images_name.append(files[i])
-		except:
-			pass
-	time.sleep(sleep_time)
+    for i in tqdm(range(len(images))):
+        duplicates = np.all(images == images[i], axis=(1, 2))
+        duplicates[i] = False
+        idx = np.where(duplicates)[0]
+        if idx.size > 0:
+            im_duplicate = [i] + idx.tolist()
+            im_duplicate.sort()
+            im_duplicates.append(im_duplicate)
 
-	images = np.array(images)
-	m = images.shape[0]
-	print("Images Read. Total images = " + str(m))
+    return im_duplicates
 
-	if m < 2:
-		print()
-		return
+def delete_files(files_to_delete):
+    for file in files_to_delete:
+        os.remove(file)
+    print("Deleted files.")
 
-	print("Finding duplicates now...")
-	im_duplicates = []
-	# pdb.set_trace()
-	for i in tqdm(range(m)):
-		duplicates = np.all(images==images[i], axis=(1,2))
-		duplicates[i] = False
-		idx = np.where(duplicates)[0]
-		if idx.size > 0:
-			im_duplicate = list()
-			im_duplicate.append(i)
-			for j in range(idx.shape[0]):
-				im_duplicate.append(idx[j])
-			im_duplicate.sort()
-			im_duplicates.append(im_duplicate)
-	time.sleep(sleep_time)
-	
-	im_duplicates.sort()
-	im_duplicates = list(im_duplicates for im_duplicates, _ in itertools.groupby(im_duplicates))
+def main():
+    parser = argparse.ArgumentParser(description='Find duplicate images in a directory.')
+    parser.add_argument('--directory', '-d', nargs='?', type=str, default=os.getcwd(), help='Directory of images.')
+    args = parser.parse_args()
 
-	if len(im_duplicates) > 0:
-		print()
-		print("Duplicates:")
-		for i in range(len(im_duplicates)):
-			for j in range(len(im_duplicates[i])):
-				print(images_name[im_duplicates[i][j]], end="\t")
-				if j>0:
-					to_delete.append(os.path.join(folder, images_name[im_duplicates[i][j]]))
-			print()
-	else:
-		print("No duplicates found.")
-	print()
+    try:
+        if args.directory:
+            directory = args.directory
+            print(f"Inspection Directory: {directory}")
+        else:
+            print("ERROR: Inspection Directory not specified")
+            return
+    except Exception as e:
+        print(e)
+        return
 
-for folder in folders:
-	check_folder(folder)
+    folders = [x[0] for x in os.walk(directory)]
+    to_delete = []
 
-print('-----------------------------Overall Report----------------------------------')
+    try:
+        for folder in folders:
+            print(f"Checking Folder -> {folder}")
+            files = os.listdir(folder)
+            files.sort()
 
-if len(to_delete) == 0:
-	print("No duplicates found.")
-	exit()
+            images = []
+            images_name = []
 
-print("\nFiles marked for delete:")
-for file in to_delete:
-	print(file)
-print("Type Y to delete")
-inp = input()
-if inp.lower() == 'y':
-	for file in to_delete:
-		os.remove(file)
-	print("Done.")
-else:
-	print("Files not deleted.")
+            for i in tqdm(range(len(files))):
+                img = process_image(os.path.join(folder, files[i]))
+                if img is not None:
+                    images.append(img)
+                    images_name.append(files[i])
+
+            images = np.array(images)
+            print(f"Images Read. Total images = {len(images)}")
+
+            if len(images) < 2:
+                continue
+
+            print("Finding duplicates now...")
+            im_duplicates = find_duplicates(images, images_name)
+
+            im_duplicates.sort()
+            im_duplicates = list(im_duplicates for im_duplicates, _ in itertools.groupby(im_duplicates))
+
+            if len(im_duplicates) > 0:
+                print("\nDuplicates:")
+                for i in range(len(im_duplicates)):
+                    for j in range(len(im_duplicates[i])):
+                        print(images_name[im_duplicates[i][j]], end="\t")
+                        if j > 0:
+                            to_delete.append(os.path.join(folder, images_name[im_duplicates[i][j]]))
+                    print()
+            else:
+                print("No duplicates found.")
+
+        print('-----------------------------Overall Report----------------------------------')
+
+        if len(to_delete) == 0:
+            print("No duplicates found.")
+            return
+
+        print("\nFiles marked for delete:")
+        for file in to_delete:
+            print(file)
+        print("Type Y to delete")
+        inp = input()
+        if inp.lower() == 'y':
+            delete_files(to_delete)
+        else:
+            print("Files not deleted.")
+    except Exception as e:
+        print(e)
+    finally:
+        input("Complete. Press enter to finish")
+
+if __name__ == "__main__":
+    main()
