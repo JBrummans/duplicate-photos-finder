@@ -11,9 +11,10 @@ import skimage.measure
 COMPARE_SIZE = 300
 SLEEP_TIME = 0.1
 
+
 def process_image(file_path):
     try:
-        img = Image.open(file_path).convert('L')
+        img = Image.open(file_path).convert("L")
         img = img.resize((COMPARE_SIZE, COMPARE_SIZE))
         img = np.array(img)
 
@@ -24,6 +25,7 @@ def process_image(file_path):
     except Exception as e:
         print(f"Error processing image {file_path}: {e}")
         return None
+
 
 def find_duplicates(images, images_name):
     im_duplicates = []
@@ -39,14 +41,25 @@ def find_duplicates(images, images_name):
 
     return im_duplicates
 
+
 def delete_files(files_to_delete):
     for file in files_to_delete:
         os.remove(file)
     print("Deleted files.")
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Find duplicate images in a directory.')
-    parser.add_argument('--directory', '-d', nargs='?', type=str, default=os.getcwd(), help='Directory of images.')
+    parser = argparse.ArgumentParser(
+        description="Find duplicate images in a directory."
+    )
+    parser.add_argument(
+        "--directory",
+        "-d",
+        nargs="?",
+        type=str,
+        default=os.getcwd(),
+        help="Directory of images.",
+    )
     args = parser.parse_args()
 
     try:
@@ -68,16 +81,18 @@ def main():
             print(f"Checking Folder -> {folder}")
             files = os.listdir(folder)
             files.sort()
-
             images = []
             images_name = []
 
             for i in tqdm(range(len(files))):
                 img = process_image(os.path.join(folder, files[i]))
-                if img is not None:
-                    images.append(img)
-                    images_name.append(files[i])
-
+                try:
+                    if img is not None:
+                        images.append(img)
+                        images_name.append(files[i])
+                except Exception as e:
+                    print(e)
+                    input()
             images = np.array(images)
             print(f"Images Read. Total images = {len(images)}")
 
@@ -88,7 +103,9 @@ def main():
             im_duplicates = find_duplicates(images, images_name)
 
             im_duplicates.sort()
-            im_duplicates = list(im_duplicates for im_duplicates, _ in itertools.groupby(im_duplicates))
+            im_duplicates = list(
+                im_duplicates for im_duplicates, _ in itertools.groupby(im_duplicates)
+            )
 
             if len(im_duplicates) > 0:
                 print("\nDuplicates:")
@@ -96,12 +113,16 @@ def main():
                     for j in range(len(im_duplicates[i])):
                         print(images_name[im_duplicates[i][j]], end="\t")
                         if j > 0:
-                            to_delete.append(os.path.join(folder, images_name[im_duplicates[i][j]]))
+                            to_delete.append(
+                                os.path.join(folder, images_name[im_duplicates[i][j]])
+                            )
                     print()
             else:
                 print("No duplicates found.")
 
-        print('-----------------------------Overall Report----------------------------------')
+        print(
+            "-----------------------------Overall Report----------------------------------"
+        )
 
         if len(to_delete) == 0:
             print("No duplicates found.")
@@ -112,7 +133,7 @@ def main():
             print(file)
         print("Type Y to delete")
         inp = input()
-        if inp.lower() == 'y':
+        if inp.lower() == "y":
             delete_files(to_delete)
         else:
             print("Files not deleted.")
@@ -120,6 +141,7 @@ def main():
         print(e)
     finally:
         input("Complete. Press enter to finish")
+
 
 if __name__ == "__main__":
     main()
