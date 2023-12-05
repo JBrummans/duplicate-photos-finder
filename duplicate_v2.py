@@ -94,8 +94,8 @@ def main():
                         images.append(img)
                         images_name.append(files[i])
                 except Exception as e:
-                    print(e)
-                    input()
+                    input(e)
+                    
             images = np.array(images)
             print(f"Images Read. Total images = {len(images)}")
 
@@ -134,9 +134,7 @@ def main():
         print("Files marked for delete:")
         for file in to_delete:
             print(file)
-        print("Type Y to delete")
-        inp = input()
-        if inp.lower() == "y":
+        if  input("Type Y to delete: ").lower() == "y":
             delete_files(to_delete)
         else:
             print("Files not deleted.")
