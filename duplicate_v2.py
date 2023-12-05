@@ -13,6 +13,10 @@ COMPARE_SIZE = 300
 
 def process_image(file_path):
     try:
+        # Check if the file is an image
+        if not os.path.isfile(file_path):
+            return None
+
         img = Image.open(file_path).convert("L")
         img = img.resize((COMPARE_SIZE, COMPARE_SIZE))
         img = np.array(img)
