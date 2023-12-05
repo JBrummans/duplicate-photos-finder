@@ -9,7 +9,6 @@ import skimage.measure
 
 # Constants
 COMPARE_SIZE = 300
-SLEEP_TIME = 0.1
 
 
 def process_image(file_path):
@@ -108,7 +107,7 @@ def main():
             )
 
             if len(im_duplicates) > 0:
-                print("\nDuplicates:")
+                print("Duplicates:")
                 for i in range(len(im_duplicates)):
                     for j in range(len(im_duplicates[i])):
                         print(images_name[im_duplicates[i][j]], end="\t")
@@ -128,7 +127,7 @@ def main():
             print("No duplicates found.")
             return
 
-        print("\nFiles marked for delete:")
+        print("Files marked for delete:")
         for file in to_delete:
             print(file)
         print("Type Y to delete")
